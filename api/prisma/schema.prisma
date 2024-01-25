@@ -1,0 +1,46 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  email         String          @unique
+  name          String?
+  FinancyRecord FinancyRecord[]
+}
+
+model FinancyRecord {
+  id                  Int      @id @default(autoincrement())
+  description         String
+  value               Float
+  paymenteMethodId    Int
+  paymenteConditionId Int?
+  userId              Int
+  parcelNumber        Int
+  createdAt           DateTime
+  updatedAt           DateTime
+
+  PaymenteMethod    PaymenteMethod?    @relation(fields: [paymenteMethodId], references: [id])
+  User              User?              @relation(fields: [userId], references: [id])
+  PaymenteCondition PaymenteCondition? @relation(fields: [paymenteConditionId], references: [id])
+}
+
+model PaymenteMethod {
+  id            Int             @id @default(autoincrement())
+  method        String
+  FinancyRecord FinancyRecord[]
+}
+
+model PaymenteCondition {
+  id            Int             @id @default(autoincrement())
+  condition     String
+  FinancyRecord FinancyRecord[]
+}
