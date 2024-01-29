@@ -11,36 +11,69 @@ datasource db {
 }
 
 model User {
-  id            Int             @id @default(autoincrement())
-  email         String          @unique
-  name          String?
-  FinancyRecord FinancyRecord[]
+  id           Int            @id @default(autoincrement())
+  email        String         @unique
+  name         String?
+  transactions Transactions[]
+  account      Accounts[]
 }
 
-model FinancyRecord {
-  id                  Int      @id @default(autoincrement())
-  description         String
-  value               Float
-  paymenteMethodId    Int
-  paymenteConditionId Int?
-  userId              Int
-  parcelNumber        Int
-  createdAt           DateTime
-  updatedAt           DateTime
+model Accounts {
+  id      Int    @id @default(autoincrement())
+  name    String
+  balance Float
+  userId  Int?
 
-  PaymenteMethod    PaymenteMethod?    @relation(fields: [paymenteMethodId], references: [id])
-  User              User?              @relation(fields: [userId], references: [id])
-  PaymenteCondition PaymenteCondition? @relation(fields: [paymenteConditionId], references: [id])
+  user         User?          @relation(fields: [userId], references: [id])
+  transactions Transactions[]
 }
 
-model PaymenteMethod {
-  id            Int             @id @default(autoincrement())
-  method        String
-  FinancyRecord FinancyRecord[]
+model Transactions {
+  id                   Int              @id @default(autoincrement())
+  description          String
+  amount               Float
+  installments         Int
+  current_installments Int
+  isRecurrence         Boolean
+  userId               Int
+  paymentTypeId        Int?
+  adjustmentsId        Int?
+  accountsId           Int
+  transactionsTypeId   Int
+  date                 DateTime
+  createdAt            DateTime
+  updatedAt            DateTime
+  User                 User             @relation(fields: [userId], references: [id])
+  Adjustments          Adjustments?     @relation(fields: [adjustmentsId], references: [id])
+  PaymentType          PaymentType?     @relation(fields: [paymentTypeId], references: [id])
+  Accounts             Accounts         @relation(fields: [accountsId], references: [id])
+  TransactionsType     TransactionsType @relation(fields: [transactionsTypeId], references: [id])
 }
 
-model PaymenteCondition {
-  id            Int             @id @default(autoincrement())
-  condition     String
-  FinancyRecord FinancyRecord[]
+model Adjustments {
+  id          Int            @id @default(autoincrement())
+  newAmount   Float
+  newDate     DateTime
+  transaction Transactions[]
+}
+
+model Categories {
+  id       Int    @id @default(autoincrement())
+  category String
+  parentId Int?
+
+  parent     Categories?  @relation("ParentCategory", fields: [parentId], references: [id])
+  categories Categories[] @relation("ParentCategory")
+}
+
+model PaymentType {
+  id           Int            @id @default(autoincrement())
+  type         String
+  transactions Transactions[]
+}
+
+model TransactionsType {
+  id           Int            @id @default(autoincrement())
+  type         String
+  transactions Transactions[]
 }
