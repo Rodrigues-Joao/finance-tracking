@@ -22,9 +22,9 @@ model Accounts {
   id      Int    @id @default(autoincrement())
   name    String
   balance Float
-  userId  Int?
+  userId  Int
 
-  user         User?          @relation(fields: [userId], references: [id])
+  user         User           @relation(fields: [userId], references: [id])
   transactions Transactions[]
 }
 

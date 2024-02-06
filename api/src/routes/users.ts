@@ -1,11 +1,8 @@
 import { FastifyInstance } from "fastify";
-import { PrismaClient } from "@prisma/client";
 import fastifyCors from "@fastify/cors";
 import { z } from "zod";
+import { prisma } from "../lib/prisma";
 
-const prisma = new PrismaClient( {
-    log: ["query"],
-} );
 type User = {
     id: number | null;
     name: string;
@@ -38,7 +35,21 @@ export async function Users( fastify: FastifyInstance )
         } );
         return res.status( 201 ).send( { response } )
     } )
+    fastify.post( "/login", async ( req, res ) =>
+    {
+        const createUserBody = z.object( { email: z.string().email() } )
+        const userBody = createUserBody.parse( req.body )
+        const user = await prisma.user.findFirst( {
 
+            where: {
+
+                email: userBody.email,
+            }
+
+
+        } );
+        return res.status( 200 ).send( { user } )
+    } )
     fastify.get( "/:id", async ( req, res ) =>
     {
         const { id } = req.params as Requestuser
