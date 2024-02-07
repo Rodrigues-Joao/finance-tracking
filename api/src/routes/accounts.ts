@@ -16,18 +16,29 @@ type Account = {
 
 export async function Accounts( fastify: FastifyInstance )
 {
-    fastify.get( "/", async ( req, res ) =>
+    fastify.get( "", async ( req, res ) =>
     {
-        const { userId } = req.body as { userId: number }
-
+        const { userId } = req.query as { userId: string }
         const accounts = await prisma.accounts.findMany( {
             where: {
-                userId: userId
+
+                userId: parseInt( userId )
             }
         } );
         return res.status( 200 ).send( { accounts } );
     } );
-
+    fastify.get( "/:id", async ( req, res ) =>
+    {
+        const { id } = req.params as { id: string }
+        const { userId } = req.query as { userId: string }
+        const accounts = await prisma.accounts.findMany( {
+            where: {
+                id: parseInt( id ),
+                userId: parseInt( userId )
+            }
+        } );
+        return res.status( 200 ).send( { accounts } );
+    } );
     fastify.post( "/", async ( req, res ) =>
     {
         const createAccount = z.object( {
@@ -36,7 +47,7 @@ export async function Accounts( fastify: FastifyInstance )
             userId: z.number(),
         } )
         const account = createAccount.parse( req.body )
-        const accountsCreated = await prisma.accounts.create( {
+        const accountCreated = await prisma.accounts.create( {
             data: {
                 name: account.name,
                 balance: account.balance,
@@ -44,20 +55,21 @@ export async function Accounts( fastify: FastifyInstance )
 
             }
         } )
-        return res.status( 201 ).send( { accountsCreated } );
+        return res.status( 201 ).send( { accountCreated } );
     } );
-    fastify.put( "/:id", async ( req, res ) =>
+    fastify.put( "/", async ( req, res ) =>
     {
         const updateAccount = z.object( {
+            id: z.number(),
             name: z.string(),
             balance: z.number(),
             userId: z.number(),
         } )
-        const { id } = req.params as { id: number }
+
         const account = updateAccount.parse( req.body )
         const accountUpdated = await prisma.accounts.update( {
             where: {
-                id: id
+                id: account.id
             },
             data: {
                 name: account.name,

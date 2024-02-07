@@ -22,12 +22,12 @@ export async function Categories( fastify: FastifyInstance )
 
     fastify.post( "/", async ( req, res ) =>
     {
-        const createCategories = z.object( {
+        const createCategory = z.object( {
             category: z.string(),
             parentId: z.number(),
             userId: z.number(),
         } )
-        const category = createCategories.parse( req.body )
+        const category = createCategory.parse( req.body )
         const categoryCreated = await prisma.categories.create( {
             data: {
                 category: category.category,
@@ -40,22 +40,23 @@ export async function Categories( fastify: FastifyInstance )
     } );
     fastify.put( "/:id", async ( req, res ) =>
     {
-        const updateAccount = z.object( {
+        const updateCategory = z.object( {
             name: z.string(),
             balance: z.number(),
             userId: z.number(),
         } )
-        const { id } = req.params as { id: number }
-        const account = updateAccount.parse( req.body )
-        const accountUpdated = await prisma.accounts.update( {
+        const { id } = req.params as { id: string }
+
+        const category = updateCategory.parse( req.body )
+        const categoryUpdated = await prisma.accounts.update( {
             where: {
-                id: id
+                id: parseInt( id )
             },
             data: {
-                name: account.name,
-                balance: account.balance,
+                name: category.name,
+                balance: category.balance,
             }
         } )
-        return res.status( 202 ).send( { accountUpdated } );
+        return res.status( 202 ).send( { categoryUpdated } );
     } );
 }
