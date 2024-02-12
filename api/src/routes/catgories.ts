@@ -10,11 +10,23 @@ export async function Categories( fastify: FastifyInstance )
 {
     fastify.get( "/", async ( req, res ) =>
     {
-        const { userId } = req.body as { userId: number }
+        const { userId } = req.query as { userId: string }
 
         const categories = await prisma.categories.findMany( {
             where: {
-                userId: userId || null
+                OR: [{
+                    userId: parseInt( userId )
+                },
+                {
+                    userId: null,
+                }
+                ],
+                AND: {
+                    parentId: null
+                }
+            },
+            include: {
+                subCategories: true
             }
         } );
         return res.status( 200 ).send( { categories } );
@@ -24,8 +36,8 @@ export async function Categories( fastify: FastifyInstance )
     {
         const createCategory = z.object( {
             category: z.string(),
-            parentId: z.number(),
-            userId: z.number(),
+            parentId: z.number().optional(),
+            userId: z.number().optional()
         } )
         const category = createCategory.parse( req.body )
         const categoryCreated = await prisma.categories.create( {
@@ -41,22 +53,70 @@ export async function Categories( fastify: FastifyInstance )
     fastify.put( "/:id", async ( req, res ) =>
     {
         const updateCategory = z.object( {
-            name: z.string(),
-            balance: z.number(),
-            userId: z.number(),
+            category: z.string(),
+            userId: z.number()
+
         } )
         const { id } = req.params as { id: string }
 
         const category = updateCategory.parse( req.body )
-        const categoryUpdated = await prisma.accounts.update( {
+        const categoryUpdated = await prisma.categories.updateMany( {
             where: {
-                id: parseInt( id )
+                AND: [{
+                    userId: category.userId
+                },
+                {
+                    userId: {
+                        not: null,
+
+                    },
+                },
+                {
+                    id: parseInt( id )
+                }
+                ],
+
             },
+
             data: {
-                name: category.name,
-                balance: category.balance,
+                category: category.category,
             }
         } )
+
+        if ( categoryUpdated.count === 0 )
+            return res.status( 403 ).send( { message: "Categoria não atualizada" } );
+
         return res.status( 202 ).send( { categoryUpdated } );
+    } );
+    fastify.delete( "/:id", async ( req, res ) =>
+    {
+        const updateCategory = z.object( {
+            userId: z.number()
+        } )
+        const { id } = req.params as { id: string }
+
+        const category = updateCategory.parse( req.body )
+        const categoryDeleted = await prisma.categories.deleteMany( {
+            where: {
+                AND: [{
+                    userId: category.userId
+                },
+                {
+                    userId: {
+                        not: null,
+
+                    },
+                },
+                {
+                    id: parseInt( id )
+                }
+                ],
+
+            }
+        } )
+
+        if ( categoryDeleted.count === 0 )
+            return res.status( 403 ).send( { message: "Categoria não excluida" } );
+        return res.status( 200 ).send( { categoryDeleted } );
     } );
 }

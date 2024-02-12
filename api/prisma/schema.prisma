@@ -59,13 +59,13 @@ model Adjustments {
 }
 
 model Categories {
-  id         Int          @id @default(autoincrement())
-  category   String
-  parentId   Int?
-  userId     Int?
-  user       User?        @relation(fields: [userId], references: [id])
-  parent     Categories?  @relation("ParentCategory", fields: [parentId], references: [id])
-  categories Categories[] @relation("ParentCategory")
+  id            Int          @id @default(autoincrement())
+  category      String
+  parentId      Int?
+  userId        Int?
+  user          User?        @relation(fields: [userId], references: [id])
+  parent        Categories?  @relation("ParentCategory", fields: [parentId], references: [id])
+  subCategories Categories[] @relation("ParentCategory")
 }
 
 model PaymentType {
