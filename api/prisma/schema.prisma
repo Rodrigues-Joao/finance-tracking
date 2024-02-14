@@ -26,7 +26,7 @@ model Accounts {
 }
 
 model Transactions {
-  id                   Int          @id @default(autoincrement())
+  id                   Int     @id @default(autoincrement())
   description          String
   amount               Float
   installments         Int
@@ -34,38 +34,49 @@ model Transactions {
   isRecurrence         Boolean
   userId               Int
   paymentTypeId        Int
-  adjustmentsId        Int?
-  accountsId           Int
-  transactionsTypeId   Int
-  categoryId           Int
-  date                 DateTime
-  createdAt            DateTime
-  updatedAt            DateTime
-  Accounts             Accounts     @relation(fields: [accountsId], references: [id])
-  Adjustments          Adjustments? @relation(fields: [adjustmentsId], references: [id])
+
+  accountsId         Int
+  transactionsTypeId Int
+  categoryId         Int?
+  isConsolidated     Boolean?
+  date               DateTime
+  createdAt          DateTime
+  updatedAt          DateTime
+  Accounts           Accounts @relation(fields: [accountsId], references: [id])
 
   PaymentType      PaymentType      @relation(fields: [paymentTypeId], references: [id])
   TransactionsType TransactionsType @relation(fields: [transactionsTypeId], references: [id])
   User             User             @relation(fields: [userId], references: [id])
-  Category         Categories       @relation(fields: [categoryId], references: [id])
+  Category         Categories?      @relation(fields: [categoryId], references: [id])
+  Adjustments      Adjustments[]
 }
 
 model Adjustments {
-  id          Int            @id @default(autoincrement())
-  newAmount   Float
-  newDate     DateTime
-  transaction Transactions[]
+  id            Int          @id @default(autoincrement())
+  newAmount     Float
+  newDate       DateTime
+  isOnly        Boolean
+  transactionId Int
+  Transaction   Transactions @relation(fields: [transactionId], references: [id])
 }
 
 model Categories {
-  id            Int            @id @default(autoincrement())
-  category      String
-  parentId      Int?
-  userId        Int?
-  parent        Categories?    @relation("ParentCategory", fields: [parentId], references: [id])
-  subCategories Categories[]   @relation("ParentCategory")
-  user          User?          @relation(fields: [userId], references: [id])
-  Transactions  Transactions[]
+  id             Int            @id @default(autoincrement())
+  category       String
+  categoryTypeId Int
+  parentId       Int?
+  userId         Int?
+  parent         Categories?    @relation("ParentCategory", fields: [parentId], references: [id])
+  subCategories  Categories[]   @relation("ParentCategory")
+  user           User?          @relation(fields: [userId], references: [id])
+  Transactions   Transactions[]
+  CategotyType   CategoryType   @relation(fields: [categoryTypeId], references: [id])
+}
+
+model CategoryType {
+  id         Int          @id @default(autoincrement())
+  type       String
+  Categories Categories[]
 }
 
 model PaymentType {

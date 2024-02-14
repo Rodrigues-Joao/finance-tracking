@@ -37,14 +37,16 @@ export async function Categories( fastify: FastifyInstance )
         const createCategory = z.object( {
             category: z.string(),
             parentId: z.number().optional(),
-            userId: z.number().optional()
+            userId: z.number().optional(),
+            categoryTypeId: z.number()
         } )
         const category = createCategory.parse( req.body )
         const categoryCreated = await prisma.categories.create( {
             data: {
                 category: category.category,
                 parentId: category.parentId,
-                userId: category.userId
+                userId: category.userId,
+                categoryTypeId: category.categoryTypeId
 
             }
         } )

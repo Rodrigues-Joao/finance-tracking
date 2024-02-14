@@ -18,11 +18,31 @@ export async function Transactions( fastify: FastifyInstance )
 {
     fastify.get( "", async ( req, res ) =>
     {
-        const { userId } = req.query as { userId: string }
+
+        let { userId, currentMonth } = req.query as { userId: string, currentMonth: string }
+        console.log( currentMonth )
+        const currentDate = new Date();
+        const startDate = new Date( currentDate.getFullYear(), parseInt( currentMonth ), 1 )
+        const finishDate = new Date( currentDate.getFullYear(), parseInt( currentMonth ) + 1, 0 )
+
         const transactions = await prisma.transactions.findMany( {
             where: {
+                userId: parseInt( userId ),
+                OR: [
+                    {
+                        date: {
+                            gte: startDate,
+                            lte: finishDate
+                        }
+                    },
+                    {
+                        isRecurrence: true
+                    }
+                ]
 
-                userId: parseInt( userId )
+            },
+            include: {
+                Adjustments: true
             }
         } );
 
@@ -31,14 +51,12 @@ export async function Transactions( fastify: FastifyInstance )
     fastify.get( "/:id", async ( req, res ) =>
     {
         const { id } = req.params as { id: string }
-        const { userId } = req.query as { userId: string }
-        const accounts = await prisma.accounts.findMany( {
+        const transaction = await prisma.transactions.findMany( {
             where: {
                 id: parseInt( id ),
-                userId: parseInt( userId )
             }
         } );
-        return res.status( 200 ).send( { accounts } );
+        return res.status( 200 ).send( { transaction } );
     } );
     fastify.post( "/", async ( req, res ) =>
     {
@@ -63,13 +81,18 @@ export async function Transactions( fastify: FastifyInstance )
         let date = new Date( transaction.date );
         let amount = parseFloat( ( transaction.amount / transaction.installments ).toFixed( 2 ) );
         let dates = calculateInstallmentsDates( date, transaction.installments )
+        let account = await prisma.accounts.findFirst( {
+            where: { id: transaction.accountsId }
+        } )
+        if ( !account )
+            return res.status( 404 ).send( { error: "account not found" } );
+
+        await prisma.accounts.update( { where: { id: account.id }, data: { balance: { decrement: amount } } } )
         try
         {
-
             for ( let i = 1; i <= transaction.installments; i++ )
             {
-
-                const created = await prisma.transactions.create( {
+                await prisma.transactions.create( {
                     data: {
                         description: transaction.description,
                         amount: amount,
@@ -81,15 +104,12 @@ export async function Transactions( fastify: FastifyInstance )
                         accountsId: transaction.accountsId,
                         transactionsTypeId: transaction.transactionsTypeId,
                         date: dates[i - 1],
+                        isConsolidated: i == 1 ? true : false,
                         categoryId: transaction.categoryId,
                         createdAt: new Date(),
                         updatedAt: new Date(),
                     }
                 } )
-
-
-
-
             }
         } catch ( error )
         {
@@ -97,45 +117,51 @@ export async function Transactions( fastify: FastifyInstance )
         }
         return res.status( 201 ).send( { message: "created" } );
     } );
-    // fastify.put( "/:id", async ( req, res ) =>
-    // {
-    //     const createTransactio = z.object( {
-    //         description: z.string(),
-    //         amount: z.number(),
-    //         accountsId: z.number(),
-    //         userId: z.number(),
-    //         categoryId: z.number(),
-    //         date: z.string().datetime()
+    fastify.put( "/:id", async ( req, res ) =>
+    {
+        const updateTransaction = z.object( {
+            description: z.string(),
+            lastAmount: z.number(),
+            amount: z.number(),
+            paymentTypeId: z.number(),
+            categoryId: z.number(),
+            isRecurrence: z.boolean(),
+            newDate: z.string().datetime(),
+            transactionDate: z.string().datetime(),
+            updateOnly: z.boolean()
+        } )
+        const { id } = req.params as { id: string }
+        const transaction = updateTransaction.parse( req.body )
+        const currentDate = new Date( transaction.newDate )
+        const transactionDate = new Date( transaction.transactionDate )
+        if ( transaction.isRecurrence )
+            await prisma.adjustments.create( {
+                data: {
+                    newAmount: transaction.amount,
+                    newDate: new Date( currentDate.getFullYear(), currentDate.getMonth(), transactionDate.getDate() ),
+                    isOnly: transaction.updateOnly,
+                    transactionId: parseInt( id )
 
+                }
+            } )
 
-    //     } )
+        const transactionUpdated = await prisma.transactions.update( {
+            where: {
+                id: parseInt( id )
+            },
 
-    //     const { id } = req.params as { id: string }
-    //     const transaction = createTransactio.parse( req.body )
-    //     const transactionUpdated = await prisma.transactions.update( {
-    //         where: {
-    //             id: parseInt( id )
-    //         },
+            data: {
 
-    //         data: {
-    //             description: transaction.description,
-    //             amount: transaction.amount,
-    //             installments: transaction.installments,
-    //             current_installments: transaction.current_installments,
-    //             isRecurrence: transaction.isRecurrence,
-    //             userId: transaction.userId,
-    //             paymentTypeId: transaction.paymentTypeId,
-    //             accountsId: transaction.accountsId,
-    //             transactionsTypeId: transaction.transactionsTypeId,
-    //             date: transaction.date,
-    //             categoryId: transaction.categoryId,
-    //             createdAt: new Date(),
-    //             updatedAt: new Date(),
-    //         }
+                description: transaction.description,
+                amount: transaction.isRecurrence ? transaction.lastAmount : transaction.amount,
+                paymentTypeId: transaction.paymentTypeId,
+                categoryId: transaction.categoryId,
+                updatedAt: new Date(),
+            }
 
-    //     } )
-    //   return res.status( 202 ).send( { accountUpdated } );
-    //} );
+        } )
+        return res.status( 202 ).send( { transactionUpdated } );
+    } );
 }
 function calculateInstallmentsDates( transictionDate: Date, installments: number )
 {
