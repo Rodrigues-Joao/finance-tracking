@@ -2,8 +2,33 @@ import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 
+type ResponseCategoriesType = [{
+    id: number;
+    category: string;
+    subCategory: ResponseCategoriesType
+
+}]
+function convertSub( data: any[] )
+{
+    return data.map( element => (
+        {
+            id: element.id,
+            category: element.category
+
+        } ) ) as ResponseCategoriesType
+}
+function convertCategories( data: any[] ): ResponseCategoriesType
+{
+
+    return data.map( ( category ) => ( {
+        id: category.id,
+        category: category.category,
+        subCategory: convertSub( category.subCategories )
+    } ) ) as ResponseCategoriesType;
 
 
+
+}
 
 
 export async function Categories( fastify: FastifyInstance )
@@ -29,7 +54,10 @@ export async function Categories( fastify: FastifyInstance )
                 subCategories: true
             }
         } );
-        return res.status( 200 ).send( { categories } );
+
+        const categoriesRes: ResponseCategoriesType = convertCategories( categories )
+
+        return res.status( 200 ).send( { categories: categoriesRes } );
     } );
 
     fastify.post( "/", async ( req, res ) =>

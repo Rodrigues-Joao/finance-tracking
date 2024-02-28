@@ -11,9 +11,48 @@ type Account = {
     userId: number;
 
 }
+type AdjustmentType = [{
+    id: number;
+    newAmount: number;
+    newDate: string;
+    isOnly: boolean;
+}]
+type TransactionsFoundType = [{
+    id: number;
+    description: string;
+    amount: number;
+    isRecurrence: boolean;
+    isConsolidated: boolean
+    adjustments: AdjustmentType;
+    paymentType: string;
+    transactionsType: string;
+
+}]
+function FormatTransactionsAdjustment( data: any[] ): AdjustmentType
+{
+    return data.map( adjustment => ( {
+        id: adjustment.id,
+        newAmount: adjustment.newAmount,
+        newDate: adjustment.newDate,
+        isOnly: adjustment.isOnly
+    } ) ) as AdjustmentType
+}
+function FormatTransactionsFound( data: any[] ): TransactionsFoundType
+{
+    return data.map( transaction => ( {
+        id: transaction.id,
+        description: transaction.description,
+        amount: transaction.amount,
+        isRecurrence: transaction.isRecurrence,
+        isConsolidated: transaction.isConsolidated,
+        paymentType: transaction.PaymentType.type,
+        transactionsType: transaction.TransactionsType.type,
+        adjustments: FormatTransactionsAdjustment( transaction.Adjustments )
 
 
 
+    } ) ) as TransactionsFoundType
+}
 export async function Transactions( fastify: FastifyInstance )
 {
     fastify.get( "", async ( req, res ) =>
@@ -41,12 +80,37 @@ export async function Transactions( fastify: FastifyInstance )
                 ]
 
             },
-            include: {
-                Adjustments: true
-            }
-        } );
+            select: {
+                id: true,
+                description: true,
+                amount: true,
+                isConsolidated: true,
+                isRecurrence: true,
 
-        return res.status( 200 ).send( { transactions } );
+                Adjustments: {
+                    select: {
+                        id: true,
+                        newAmount: true,
+                        newDate: true,
+                        isOnly: true
+                    }
+                },
+                PaymentType: {
+                    select: {
+                        type: true
+                    }
+                },
+                TransactionsType: {
+                    select: {
+                        type: true
+                    }
+
+                }
+            }
+
+        } );
+        const response = FormatTransactionsFound( transactions )
+        return res.status( 200 ).send( { response } );
     } );
     fastify.get( "/:id", async ( req, res ) =>
     {
