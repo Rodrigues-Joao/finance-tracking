@@ -11,6 +11,10 @@ type Account = {
     userId: number;
 
 }
+type CategoryType = {
+    id: number;
+    category: string;
+}
 type AdjustmentType = [{
     id: number;
     newAmount: number;
@@ -26,6 +30,8 @@ type TransactionsFoundType = [{
     adjustments: AdjustmentType;
     paymentType: string;
     transactionsType: string;
+    date: string;
+    category: CategoryType;
 
 }]
 function FormatTransactionsAdjustment( data: any[] ): AdjustmentType
@@ -47,7 +53,9 @@ function FormatTransactionsFound( data: any[] ): TransactionsFoundType
         isConsolidated: transaction.isConsolidated,
         paymentType: transaction.PaymentType.type,
         transactionsType: transaction.TransactionsType.type,
-        adjustments: FormatTransactionsAdjustment( transaction.Adjustments )
+        date: transaction.date,
+        adjustments: FormatTransactionsAdjustment( transaction.Adjustments ),
+        category: transaction.Category
 
 
 
@@ -67,6 +75,7 @@ export async function Transactions( fastify: FastifyInstance )
         const transactions = await prisma.transactions.findMany( {
             where: {
                 userId: parseInt( userId ),
+
                 OR: [
                     {
                         date: {
@@ -86,6 +95,7 @@ export async function Transactions( fastify: FastifyInstance )
                 amount: true,
                 isConsolidated: true,
                 isRecurrence: true,
+                date: true,
 
                 Adjustments: {
                     select: {
@@ -105,6 +115,12 @@ export async function Transactions( fastify: FastifyInstance )
                         type: true
                     }
 
+                },
+                Category: {
+                    select: {
+                        id: true,
+                        category: true
+                    }
                 }
             }
 
