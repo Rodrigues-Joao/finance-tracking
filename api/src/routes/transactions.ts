@@ -11,55 +11,57 @@ type Account = {
     userId: number;
 
 }
+
+type TransactionsFoundType =
+    [{
+        id: number;
+        description: string;
+        amount: number;
+        isConsolidated?: boolean;
+        isRecurrence: boolean;
+        date: string;
+        Adjustments: AdjustmentType,
+        PaymentType: PaymentType;
+        TransactionsType: TransactionsType;
+        Category: CategoryType;
+    }];
 type CategoryType = {
     id: number;
     category: string;
 }
+type PaymentType = {
+    id: number, type: string
+}
+type TransactionsType = {
+    id: number, type: string
+}
+
 type AdjustmentType = [{
     id: number;
     newAmount: number;
     newDate: string;
     isOnly: boolean;
 }]
-type TransactionsFoundType = [{
-    id: number;
-    description: string;
-    amount: number;
-    isRecurrence: boolean;
-    isConsolidated: boolean
-    adjustments: AdjustmentType;
-    paymentType: string;
-    transactionsType: string;
-    date: string;
-    category: CategoryType;
-
-}]
-function FormatTransactionsAdjustment( data: any[] ): AdjustmentType
+function SumTransactionsByType( data: any[] ): { totalIncome: number, totalExpenses: number }
 {
-    return data.map( adjustment => ( {
-        id: adjustment.id,
-        newAmount: adjustment.newAmount,
-        newDate: adjustment.newDate,
-        isOnly: adjustment.isOnly
-    } ) ) as AdjustmentType
-}
-function FormatTransactionsFound( data: any[] ): TransactionsFoundType
-{
-    return data.map( transaction => ( {
-        id: transaction.id,
-        description: transaction.description,
-        amount: transaction.amount,
-        isRecurrence: transaction.isRecurrence,
-        isConsolidated: transaction.isConsolidated,
-        paymentType: transaction.PaymentType.type,
-        transactionsType: transaction.TransactionsType.type,
-        date: transaction.date,
-        adjustments: FormatTransactionsAdjustment( transaction.Adjustments ),
-        category: transaction.Category
+    let sumIncome = 0;
+    let sumExpenses = 0;
 
+    data.map( transaction =>
+    {
+        switch ( transaction.TransactionsType.id )
+        {
+            case 1:
+                sumExpenses += transaction.amount;
+                break;
+            case 2:
+                sumIncome += transaction.amount;
+                break;
+        }
 
+    } )
 
-    } ) ) as TransactionsFoundType
+    return { totalIncome: sumIncome, totalExpenses: sumExpenses }
 }
 export async function Transactions( fastify: FastifyInstance )
 {
@@ -73,6 +75,7 @@ export async function Transactions( fastify: FastifyInstance )
         const finishDate = new Date( currentDate.getFullYear(), parseInt( currentMonth ) + 1, 0 )
 
         const transactions = await prisma.transactions.findMany( {
+
             where: {
                 userId: parseInt( userId ),
 
@@ -96,6 +99,9 @@ export async function Transactions( fastify: FastifyInstance )
                 isConsolidated: true,
                 isRecurrence: true,
                 date: true,
+                installments: true,
+                current_installments: true,
+
 
                 Adjustments: {
                     select: {
@@ -107,11 +113,13 @@ export async function Transactions( fastify: FastifyInstance )
                 },
                 PaymentType: {
                     select: {
+                        id: true,
                         type: true
                     }
                 },
                 TransactionsType: {
                     select: {
+                        id: true,
                         type: true
                     }
 
@@ -122,11 +130,20 @@ export async function Transactions( fastify: FastifyInstance )
                         category: true
                     }
                 }
+            },
+            orderBy: {
+                date: 'asc'
             }
 
         } );
-        const response = FormatTransactionsFound( transactions )
-        return res.status( 200 ).send( { response } );
+
+        const response = SumTransactionsByType( transactions )
+
+        return res.status( 200 ).send( {
+            TotalIncome: response.totalIncome,
+            TotalExpenses: response.totalExpenses,
+            transactions: transactions
+        } );
     } );
     fastify.get( "/:id", async ( req, res ) =>
     {
