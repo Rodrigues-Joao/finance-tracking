@@ -20,6 +20,10 @@ export async function Accounts( fastify: FastifyInstance )
     {
         const { userId } = req.query as { userId: string }
         const accounts = await prisma.accounts.findMany( {
+            select: {
+                id: true,
+                name: true
+            },
             where: {
 
                 userId: parseInt( userId )
