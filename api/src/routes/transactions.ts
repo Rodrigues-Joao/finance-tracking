@@ -49,6 +49,7 @@ function SumTransactionsByType( data: any[] ): { totalIncome: number, totalExpen
 
     data.map( transaction =>
     {
+        console.log( transaction.amount )
         switch ( transaction.TransactionsType.id )
         {
             case 1:
@@ -70,15 +71,16 @@ export async function Transactions( fastify: FastifyInstance )
 
         let { userId, currentMonth } = req.query as { userId: string, currentMonth: string }
         console.log( currentMonth )
+        const month = parseInt( currentMonth ) - 1;
         const currentDate = new Date();
-        const startDate = new Date( currentDate.getFullYear(), parseInt( currentMonth ), 1 )
-        const finishDate = new Date( currentDate.getFullYear(), parseInt( currentMonth ) + 1, 0 )
-
+        const startDate = new Date( currentDate.getFullYear(), month, 1 )
+        const finishDate = new Date( currentDate.getFullYear(), month + 1, 0 )
+        console.log( startDate )
+        console.log( finishDate )
         const transactions = await prisma.transactions.findMany( {
-
             where: {
-                userId: parseInt( userId ),
 
+                userId: parseInt( userId ),
                 OR: [
                     {
                         date: {
@@ -90,6 +92,8 @@ export async function Transactions( fastify: FastifyInstance )
                         isRecurrence: true
                     }
                 ]
+
+
 
             },
             select: {
@@ -132,8 +136,14 @@ export async function Transactions( fastify: FastifyInstance )
                 }
             },
             orderBy: {
-                date: 'asc'
-            }
+                date: 'asc',
+
+
+            },
+            skip: 0,
+            take: 200
+
+
 
         } );
 
@@ -160,10 +170,10 @@ export async function Transactions( fastify: FastifyInstance )
 
         const createTransactio = z.object( {
             description: z.string(),
-            amount: z.number(),
+            amount: z.number().min( 0.01 ),
             installments: z.number().default( 1 ),
-            isRecurrence: z.boolean(),
-            paymentTypeId: z.number(),
+            isRecurrence: z.boolean().default( false ),
+            paymentTypeId: z.number().optional(),
             transactionsTypeId: z.number(),
             accountsId: z.number(),
             userId: z.number(),
