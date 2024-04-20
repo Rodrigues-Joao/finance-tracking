@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 type ResponseCategoriesType = [{
     id: number;
     category: string;
+    categoryTypeId: number;
     subCategory: ResponseCategoriesType
 
 }]
@@ -13,7 +14,8 @@ function convertSub( data: any[] )
     return data.map( element => (
         {
             id: element.id,
-            category: element.category
+            category: element.category,
+            categoryTypeId: element.categoryTypeId,
 
         } ) ) as ResponseCategoriesType
 }
@@ -23,6 +25,7 @@ function convertCategories( data: any[] ): ResponseCategoriesType
     return data.map( ( category ) => ( {
         id: category.id,
         category: category.category,
+        categoryTypeId: category.categoryTypeId,
         subCategory: convertSub( category.subCategories )
     } ) ) as ResponseCategoriesType;
 
@@ -50,8 +53,17 @@ export async function Categories( fastify: FastifyInstance )
                     parentId: null
                 }
             },
-            include: {
-                subCategories: true
+            select: {
+                id: true,
+                category: true,
+                categoryTypeId: true,
+                subCategories: {
+                    select: {
+                        id: true,
+                        category: true,
+                        categoryTypeId: true
+                    }
+                }
             }
         } );
 

@@ -33,7 +33,7 @@ model Transactions {
   current_installments Int
   isRecurrence         Boolean
   userId               Int
-  paymentTypeId        Int
+  paymentTypeId        Int?
 
   accountsId         Int
   transactionsTypeId Int
@@ -44,7 +44,7 @@ model Transactions {
   updatedAt          DateTime
   Accounts           Accounts @relation(fields: [accountsId], references: [id])
 
-  PaymentType      PaymentType      @relation(fields: [paymentTypeId], references: [id])
+  PaymentType      PaymentType?     @relation(fields: [paymentTypeId], references: [id])
   TransactionsType TransactionsType @relation(fields: [transactionsTypeId], references: [id])
   User             User             @relation(fields: [userId], references: [id])
   Category         Categories?      @relation(fields: [categoryId], references: [id])

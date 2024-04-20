@@ -3,6 +3,7 @@ import { FastifyInstance } from "fastify";
 
 import { date, z } from "zod";
 import { prisma } from "../lib/prisma";
+import SumTransactionsByType from "../utils/TransactionsSum";
 
 
 type Account = {
@@ -12,19 +13,21 @@ type Account = {
 
 }
 
-type TransactionsFoundType =
-    [{
-        id: number;
-        description: string;
-        amount: number;
-        isConsolidated?: boolean;
-        isRecurrence: boolean;
-        date: string;
-        Adjustments: AdjustmentType,
-        PaymentType: PaymentType;
-        TransactionsType: TransactionsType;
-        Category: CategoryType;
-    }];
+
+type TransactionsFoundType = {
+    id: number;
+    description: string;
+    amount: number;
+    isConsolidated?: boolean | null;
+    isRecurrence: boolean;
+    date: string;
+    installments: number;
+    current_installments: number;
+    Adjustments?: AdjustmentType;
+    PaymentType: PaymentType;
+    TransactionsType: TransactionsType;
+    Category?: CategoryType;
+}
 type CategoryType = {
     id: number;
     category: string;
@@ -42,36 +45,13 @@ type AdjustmentType = [{
     newDate: string;
     isOnly: boolean;
 }]
-function SumTransactionsByType( data: any[] ): { totalIncome: number, totalExpenses: number }
-{
-    let sumIncome = 0;
-    let sumExpenses = 0;
-
-    data.map( transaction =>
-    {
-        console.log( transaction.amount )
-        switch ( transaction.TransactionsType.id )
-        {
-            case 1:
-                sumExpenses += transaction.amount;
-                break;
-            case 2:
-                sumIncome += transaction.amount;
-                break;
-        }
-
-    } )
-
-    return { totalIncome: sumIncome, totalExpenses: sumExpenses }
-}
 export async function Transactions( fastify: FastifyInstance )
 {
     fastify.get( "", async ( req, res ) =>
     {
 
         let { userId, currentMonth } = req.query as { userId: string, currentMonth: string }
-        console.log( currentMonth )
-        const month = parseInt( currentMonth ) - 1;
+        const month = parseInt( currentMonth );
         const currentDate = new Date();
         const startDate = new Date( currentDate.getFullYear(), month, 1 )
         const finishDate = new Date( currentDate.getFullYear(), month + 1, 0 )
@@ -147,7 +127,7 @@ export async function Transactions( fastify: FastifyInstance )
 
         } );
 
-        const response = SumTransactionsByType( transactions )
+        const response = SumTransactionsByType( transactions, month )
 
         return res.status( 200 ).send( {
             TotalIncome: response.totalIncome,
@@ -173,7 +153,7 @@ export async function Transactions( fastify: FastifyInstance )
             amount: z.number().min( 0.01 ),
             installments: z.number().default( 1 ),
             isRecurrence: z.boolean().default( false ),
-            paymentTypeId: z.number().optional(),
+            paymentTypeId: z.number().optional().default( 1 ),
             transactionsTypeId: z.number(),
             accountsId: z.number(),
             userId: z.number(),
@@ -185,6 +165,7 @@ export async function Transactions( fastify: FastifyInstance )
 
 
         const transaction = createTransactio.parse( req.body )
+
         let date = new Date( transaction.date );
         let amount = parseFloat( ( transaction.amount / transaction.installments ).toFixed( 2 ) );
         let dates = calculateInstallmentsDates( date, transaction.installments )
