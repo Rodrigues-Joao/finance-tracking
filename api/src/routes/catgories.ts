@@ -90,7 +90,7 @@ export async function Categories( fastify: FastifyInstance )
 
             }
         } )
-        return res.status( 201 ).send( { categoryCreated } );
+        return res.status( 201 ).send( { message: "Categoria criada com sucesso!" } );
     } );
     fastify.put( "/:id", async ( req, res ) =>
     {
