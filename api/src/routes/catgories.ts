@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 
 type ResponseCategoriesType = [{
     id: number;
+    isParent?: boolean;
     category: string;
     categoryTypeId: number;
     subCategory: ResponseCategoriesType
@@ -24,6 +25,7 @@ function convertCategories( data: any[] ): ResponseCategoriesType
 
     return data.map( ( category ) => ( {
         id: category.id,
+        isParent: category.parentId !== null,
         category: category.category,
         categoryTypeId: category.categoryTypeId,
         subCategory: convertSub( category.subCategories )
@@ -39,16 +41,17 @@ export async function Categories( fastify: FastifyInstance )
     fastify.get( "/", async ( req, res ) =>
     {
         const { userId } = req.query as { userId: string }
-
+        const cluseCategoryByUser = [
+            {
+                userId: parseInt( userId )
+            },
+            {
+                userId: null
+            }
+        ]
         const categories = await prisma.categories.findMany( {
             where: {
-                OR: [{
-                    userId: parseInt( userId )
-                },
-                {
-                    userId: null,
-                }
-                ],
+                OR: cluseCategoryByUser,
                 AND: {
                     parentId: null
                 }
@@ -58,7 +61,11 @@ export async function Categories( fastify: FastifyInstance )
                 category: true,
                 categoryTypeId: true,
                 subCategories: {
+                    where: {
+                        OR: cluseCategoryByUser
+                    },
                     select: {
+
                         id: true,
                         category: true,
                         categoryTypeId: true

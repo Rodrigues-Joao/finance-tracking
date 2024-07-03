@@ -22,7 +22,8 @@ export async function Accounts( fastify: FastifyInstance )
         const accounts = await prisma.accounts.findMany( {
             select: {
                 id: true,
-                name: true
+                name: true,
+                balance: true,
             },
             where: {
 
