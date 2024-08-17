@@ -1,3 +1,5 @@
+import type { FastifyCookieOptions } from '@fastify/cookie'
+import cookie from '@fastify/cookie'
 import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 
@@ -5,7 +7,7 @@ import { z } from "zod";
 import { Routes } from "./routes";
 
 
-
+const PRIVATE_KEY = process.env.COOKIE_PRIVATE_TOKEN || "12345678"
 
 
 async function bootstrap()
@@ -50,6 +52,10 @@ async function bootstrap()
     await fastify.register( cors, {
         origin: true,
     } );
+    fastify.register( cookie, {
+        secret: PRIVATE_KEY, // for cookies signature
+        parseOptions: {}     // options for parsing cookies
+    } as FastifyCookieOptions )
     fastify.register( Routes );
     await fastify.ready()
     await fastify.listen( { port: 3333, host: "0.0.0.0" } );

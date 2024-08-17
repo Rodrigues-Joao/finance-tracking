@@ -11,6 +11,7 @@ model User {
   id           Int            @id @default(autoincrement())
   email        String         @unique
   name         String?
+  password     String
   account      Accounts[]
   Categories   Categories[]
   transactions Transactions[]
@@ -26,29 +27,27 @@ model Accounts {
 }
 
 model Transactions {
-  id                   Int     @id @default(autoincrement())
+  id                   Int              @id @default(autoincrement())
   description          String
   amount               Float
   installments         Int
   current_installments Int
   isRecurrence         Boolean
   userId               Int
-  paymentTypeId        Int?
-
-  accountsId         Int
-  transactionsTypeId Int
-  categoryId         Int?
-  isConsolidated     Boolean?
-  date               DateTime
-  createdAt          DateTime
-  updatedAt          DateTime
-  Accounts           Accounts @relation(fields: [accountsId], references: [id])
-
-  PaymentType      PaymentType?     @relation(fields: [paymentTypeId], references: [id])
-  TransactionsType TransactionsType @relation(fields: [transactionsTypeId], references: [id])
-  User             User             @relation(fields: [userId], references: [id])
-  Category         Categories?      @relation(fields: [categoryId], references: [id])
-  Adjustments      Adjustments[]
+  paymentTypeId        Int
+  accountsId           Int
+  transactionsTypeId   Int
+  date                 DateTime
+  createdAt            DateTime
+  updatedAt            DateTime
+  categoryId           Int?
+  isConsolidated       Boolean?
+  Adjustments          Adjustments[]
+  Accounts             Accounts         @relation(fields: [accountsId], references: [id])
+  Category             Categories?      @relation(fields: [categoryId], references: [id])
+  PaymentType          PaymentType      @relation(fields: [paymentTypeId], references: [id])
+  TransactionsType     TransactionsType @relation(fields: [transactionsTypeId], references: [id])
+  User                 User             @relation(fields: [userId], references: [id])
 }
 
 model Adjustments {
@@ -63,14 +62,14 @@ model Adjustments {
 model Categories {
   id             Int            @id @default(autoincrement())
   category       String
-  categoryTypeId Int
   parentId       Int?
   userId         Int?
+  categoryTypeId Int
+  CategotyType   CategoryType   @relation(fields: [categoryTypeId], references: [id])
   parent         Categories?    @relation("ParentCategory", fields: [parentId], references: [id])
   subCategories  Categories[]   @relation("ParentCategory")
   user           User?          @relation(fields: [userId], references: [id])
   Transactions   Transactions[]
-  CategotyType   CategoryType   @relation(fields: [categoryTypeId], references: [id])
 }
 
 model CategoryType {
