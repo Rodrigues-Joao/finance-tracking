@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as bcrypt from "bcrypt"
 import { prisma } from "../lib/prisma";
 import { FastifyTypedInstance } from "../fastify-config-instance";
+import { UserService } from "../services/user-service";
 
 type User = {
     id: number | null;
@@ -16,7 +17,7 @@ type Requestuser = {
     id: string;
 }
 
-export async function Users( fastify: FastifyTypedInstance )
+export async function UserController( fastify: FastifyTypedInstance )
 {
     fastify.get( "/", {
         schema: {
@@ -34,7 +35,7 @@ export async function Users( fastify: FastifyTypedInstance )
     }, async ( req, res ) =>
     {
 
-        const users = await prisma.user.findMany();
+        const users = await UserService.getAll()
         return res.status( 200 ).send( { users } );
     } );
 
@@ -59,9 +60,7 @@ export async function Users( fastify: FastifyTypedInstance )
             } ),
             response: {
                 201: z.object( {
-                    id: z.number(),
-                    name: z.string().nullable(),
-                    email: z.string()
+                    userId: z.number(),
                 } ),
                 400: z.object( {
                     message: z.string()
@@ -70,34 +69,25 @@ export async function Users( fastify: FastifyTypedInstance )
         }
     }, async ( req, res ) =>
     {
-        const createUserBody = z.object( { name: z.string(), email: z.string().email(), password: z.string() } )
-        const user = createUserBody.parse( req.body )
-        const salt = await bcrypt.genSalt( 10 )
-        const hash = await bcrypt.hash( user.password, salt )
-        const response = await prisma.user.create( {
-            data: {
-                name: user.name,
-                email: user.email,
-                password: hash
 
-            }
-        } );
-        if ( !response )
+        const user = req.body
+        const userId = await UserService.create( user )
 
-            return res.status( 400 ).send( { message: "User not created" } )
-
-        return res.status( 201 ).send( { ...response } )
+        return res.status( 201 ).send( userId )
     } )
 
     fastify.get( "/:id", {
         schema: {
             tags: ["users"],
+            params: z.object( {
+                id: z.coerce.number()
+            } ),
             response: {
                 200: z.object( {
                     id: z.number(),
                     name: z.string().nullable(),
-                    email: z.string()
-
+                    email: z.string(),
+                    password: z.string().optional()
                 } ),
                 404: z.object( {
                     message: z.string()
@@ -107,16 +97,8 @@ export async function Users( fastify: FastifyTypedInstance )
         }
     }, async ( req, res ) =>
     {
-        const { id } = req.params as Requestuser
-        const response = await prisma.user.findFirst( {
-            where: {
-                id: parseInt( id )
-            }
-        } );
-        if ( !response )
-        {
-            return res.status( 404 ).send( { message: "User not found" } )
-        }
-        return res.status( 200 ).send( { ...response } )
+        const { id } = req.params
+        const user = await UserService.getById( id )
+        return res.status( 200 ).send( { ...user, id } )
     } )
 }

@@ -12,8 +12,7 @@ test( "Deve criar um usuário", async () =>
         password: "Gw1#98dsh"
     }
     const respose = ( await axios.post( 'http://localhost:3333/users', user ) ).data
-    expect( respose.name ).toBe( user.name )
-    expect( respose.email ).toBe( user.email )
+    expect( respose.userId ).toBeDefined()
 
 } )
 
