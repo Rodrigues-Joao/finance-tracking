@@ -12,9 +12,9 @@ export async function Routes( fastify: FastifyInstance )
 {
 
     fastify.register( Users, { prefix: '/users' } )
-    fastify.register( AccessControl, { prefix: '/access-control' } )
-    fastify.register( Accounts, { prefix: '/accounts' } )
-    fastify.register( Categories, { prefix: '/categories' } )
-    fastify.register( Transactions, { prefix: '/transactions' } )
-    fastify.register( Resume, { prefix: '/resume' } )
+    // fastify.register( AccessControl, { prefix: '/access-control' } )
+    // fastify.register( Accounts, { prefix: '/accounts' } )
+    // fastify.register( Categories, { prefix: '/categories' } )
+    // fastify.register( Transactions, { prefix: '/transactions' } )
+    // fastify.register( Resume, { prefix: '/resume' } )
 }

@@ -3,6 +3,7 @@ import fastifyCors from "@fastify/cors";
 import { z } from "zod";
 import * as bcrypt from "bcrypt"
 import { prisma } from "../lib/prisma";
+import { FastifyTypedInstance } from "../fastify-config-instance";
 
 type User = {
     id: number | null;
@@ -15,7 +16,7 @@ type Requestuser = {
     id: string;
 }
 
-export async function Users( fastify: FastifyInstance )
+export async function Users( fastify: FastifyTypedInstance )
 {
     fastify.get( "/", async ( req, res ) =>
     {
@@ -41,7 +42,24 @@ export async function Users( fastify: FastifyInstance )
         return res.status( 201 ).send( { response } )
     } )
 
-    fastify.get( "/:id", async ( req, res ) =>
+    fastify.get( "/:id", {
+        schema: {
+            tags: ["users"],
+            response: {
+                200: z.object( {
+                    response: z.object( {
+                        id: z.number(),
+                        name: z.string().nullable(),
+                        email: z.string()
+                    } )
+                } ),
+                404: z.object( {
+                    message: z.string()
+                } )
+
+            }
+        }
+    }, async ( req, res ) =>
     {
         const { id } = req.params as Requestuser
         const response = await prisma.user.findFirst( {
@@ -49,6 +67,10 @@ export async function Users( fastify: FastifyInstance )
                 id: parseInt( id )
             }
         } );
+        if ( !response )
+        {
+            return res.status( 404 ).send( { message: "User not found" } )
+        }
         return res.status( 200 ).send( { response } )
     } )
 }
