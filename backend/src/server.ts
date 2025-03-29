@@ -5,6 +5,7 @@ import { jsonSchemaTransform, serializerCompiler, validatorCompiler, ZodTypeProv
 import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUI from '@fastify/swagger-ui';
 import { Routes } from "./routes";
+import { ZodError } from "zod";
 
 
 const PRIVATE_KEY = process.env.COOKIE_PRIVATE_TOKEN || "12345678"
@@ -13,6 +14,21 @@ const PRIVATE_KEY = process.env.COOKIE_PRIVATE_TOKEN || "12345678"
 async function bootstrap()
 {
     const app = fastify();
+    app.setErrorHandler( ( error, request, reply ) =>
+    {
+        if ( !error.validation )
+            return reply
+        const symbols = Object.getOwnPropertySymbols( error?.validation[0] );
+        if ( !symbols )
+            return reply
+        if ( symbols[0].description !== 'ZodFastifySchemaValidationError' )
+            return reply
+
+        return reply.status( error.statusCode ?? 500 ).send( { message: error.validation[0].message } )
+
+
+    } )
+
     app.setValidatorCompiler( validatorCompiler );
     app.setSerializerCompiler( serializerCompiler );
     app.register( fastifySwagger, {
@@ -23,30 +39,6 @@ async function bootstrap()
                 description: 'Testing the Fastify swagger API',
                 version: '0.1.0'
             },
-
-            // servers: [
-            //     {
-            //         url: 'http://localhost:3333',
-            //         description: 'Development server'
-            //     }
-            // ],
-            // tags: [
-            //     { name: 'user', description: 'User related end-points' },
-            //     { name: 'code', description: 'Code related end-points' }
-            // ],
-            // components: {
-            //     securitySchemes: {
-            //         apiKey: {
-            //             type: 'apiKey',
-            //             name: 'apiKey',
-            //             in: 'header'
-            //         }
-            //     }
-            // },
-            // externalDocs: {
-            //     url: 'https://swagger.io',
-            //     description: 'Find more info here'
-            // }
         },
         transform: jsonSchemaTransform,
     } )

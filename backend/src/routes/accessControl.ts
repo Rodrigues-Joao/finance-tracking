@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import * as bcrypt from "bcrypt"
 import { sign } from 'jsonwebtoken'
+import { FastifyTypedInstance } from "../fastify-config-instance";
 const PRIVATE_KEY = process.env.PRIVATE_TOKEN || "12345678"
 export const userLoginSchema = z.object( {
     email: z.string().email( { message: "informe um email válido" } ),
@@ -12,10 +13,14 @@ export const userLoginSchema = z.object( {
 const sessionExpiresIn = 1000 * 60 * 60 * 24;
 
 export type UserLoginSchema = z.infer<typeof userLoginSchema>
-export async function AccessControl( fastify: FastifyInstance )
+export async function AccessControl( fastify: FastifyTypedInstance )
 {
 
-    fastify.post( "/login", async ( req, res ) =>
+    fastify.post( "/login", {
+        schema: {
+            tags: ["access-control"],
+        }
+    }, async ( req, res ) =>
     {
         let userBody: UserLoginSchema;
         try
@@ -50,7 +55,11 @@ export async function AccessControl( fastify: FastifyInstance )
             email: user.email
         } )
     } )
-    fastify.post( "/logout", async ( req, res ) =>
+    fastify.post( "/logout", {
+        schema: {
+            tags: ["access-control"],
+        }
+    }, async ( req, res ) =>
     {
         const createUserBody = z.object( { email: z.string().email() } )
         const userBody = createUserBody.parse( req.body )

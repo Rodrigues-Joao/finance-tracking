@@ -18,14 +18,57 @@ type Requestuser = {
 
 export async function Users( fastify: FastifyTypedInstance )
 {
-    fastify.get( "/", async ( req, res ) =>
+    fastify.get( "/", {
+        schema: {
+            tags: ["users"],
+            response: {
+                200: z.object( {
+                    users: z.array( z.object( {
+                        id: z.number(),
+                        name: z.string().nullable(),
+                        email: z.string()
+                    } ) )
+                } )
+            }
+        }
+    }, async ( req, res ) =>
     {
 
         const users = await prisma.user.findMany();
         return res.status( 200 ).send( { users } );
     } );
 
-    fastify.post( "/", async ( req, res ) =>
+    fastify.post( "/", {
+        schema: {
+            tags: ["users"],
+            body: z.object( {
+                name: z.string(),
+                email: z.string().email( { message: "Invalid email" } ),
+                password: z.string().min( 8, { message: "Password must be at least 8 characters" } ).refine( ( password ) => /[A-Z]/.test( password ), {
+                    message: "Password must contain at least one uppercase letter",
+                } )
+                    .refine( ( password ) => /[a-z]/.test( password ), {
+                        message: "Password must contain at least one lowercase letter",
+                    } )
+                    .refine( ( password ) => /[0-9]/.test( password ), {
+                        message: "Password must contain at least one number",
+                    } )
+                    .refine( ( password ) => /[!@#$%^&*]/.test( password ), {
+                        message: "Password must contain at least one special character",
+                    } )
+            } ),
+            response: {
+                201: z.object( {
+                    id: z.number(),
+                    name: z.string().nullable(),
+                    email: z.string()
+                } ),
+                400: z.object( {
+                    message: z.string()
+                } )
+            }
+        }
+    }, async ( req, res ) =>
     {
         const createUserBody = z.object( { name: z.string(), email: z.string().email(), password: z.string() } )
         const user = createUserBody.parse( req.body )
@@ -39,7 +82,11 @@ export async function Users( fastify: FastifyTypedInstance )
 
             }
         } );
-        return res.status( 201 ).send( { response } )
+        if ( !response )
+
+            return res.status( 400 ).send( { message: "User not created" } )
+
+        return res.status( 201 ).send( { ...response } )
     } )
 
     fastify.get( "/:id", {
@@ -47,11 +94,10 @@ export async function Users( fastify: FastifyTypedInstance )
             tags: ["users"],
             response: {
                 200: z.object( {
-                    response: z.object( {
-                        id: z.number(),
-                        name: z.string().nullable(),
-                        email: z.string()
-                    } )
+                    id: z.number(),
+                    name: z.string().nullable(),
+                    email: z.string()
+
                 } ),
                 404: z.object( {
                     message: z.string()
@@ -71,6 +117,6 @@ export async function Users( fastify: FastifyTypedInstance )
         {
             return res.status( 404 ).send( { message: "User not found" } )
         }
-        return res.status( 200 ).send( { response } )
+        return res.status( 200 ).send( { ...response } )
     } )
 }

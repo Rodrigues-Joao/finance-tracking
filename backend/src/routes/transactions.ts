@@ -4,6 +4,7 @@ import { FastifyInstance } from "fastify";
 import { date, z } from "zod";
 import { prisma } from "../lib/prisma";
 import SumTransactionsByType from "../utils/TransactionsSum";
+import { FastifyTypedInstance } from "../fastify-config-instance";
 
 
 type Account = {
@@ -45,9 +46,56 @@ type AdjustmentType = [{
     newDate: string;
     isOnly: boolean;
 }]
-export async function Transactions( fastify: FastifyInstance )
+export async function Transactions( fastify: FastifyTypedInstance )
 {
-    fastify.get( "", async ( req, res ) =>
+    fastify.get( "", {
+
+        schema: {
+            tags: ["transactions"],
+            querystring: z.object( {
+                userId: z.string(),
+                currentMonth: z.string()
+            } ),
+            response: {
+                200: z.object( {
+                    TotalIncome: z.number(),
+                    TotalExpenses: z.number(),
+                    transactions: z.array( z.object( {
+                        id: z.number(),
+                        description: z.string(),
+                        amount: z.number(),
+                        isConsolidated: z.boolean().nullable(),
+                        isRecurrence: z.boolean(),
+                        date: date(),
+                        installments: z.number(),
+                        current_installments: z.number(),
+
+                        Adjustments: z.array( z.object( {
+                            id: z.number(),
+                            newAmount: z.number(),
+                            newDate: date(),
+                            isOnly: z.boolean()
+                        } ) ).optional(),
+
+                        PaymentType: z.object( {
+                            id: z.number(),
+                            type: z.string()
+                        } ),
+                        TransactionsType: z.object( {
+                            id: z.number(),
+                            type: z.string()
+                        } ),
+                        Category: z.object( {
+                            id: z.number(),
+                            category: z.string()
+                        } ).nullable()
+
+                    } ) )
+                } )
+            }
+        }
+
+    }, async ( req, res ) =>
     {
 
         let { userId, currentMonth } = req.query as { userId: string, currentMonth: string }
@@ -55,8 +103,7 @@ export async function Transactions( fastify: FastifyInstance )
         const currentDate = new Date();
         const startDate = new Date( currentDate.getFullYear(), month, 1 )
         const finishDate = new Date( currentDate.getFullYear(), month + 1, 0 )
-        console.log( startDate )
-        console.log( finishDate )
+
         const transactions = await prisma.transactions.findMany( {
             where: {
 
@@ -135,17 +182,32 @@ export async function Transactions( fastify: FastifyInstance )
             transactions: transactions
         } );
     } );
-    fastify.get( "/:id", async ( req, res ) =>
+    fastify.get( "/:id", {
+
+        schema: {
+            tags: ["transactions"],
+            params: z.object( {
+                id: z.coerce.number()
+            } ),
+        }
+
+    }, async ( req, res ) =>
     {
-        const { id } = req.params as { id: string }
-        const transaction = await prisma.transactions.findMany( {
+        const { id } = req.params
+        const transaction = await prisma.transactions.findUnique( {
             where: {
-                id: parseInt( id ),
+                id
             }
         } );
-        return res.status( 200 ).send( { transaction } );
+        return res.status( 200 ).send( { ...transaction } );
     } );
-    fastify.post( "/", async ( req, res ) =>
+    fastify.post( "/", {
+
+        schema: {
+            tags: ["transactions"],
+        }
+
+    }, async ( req, res ) =>
     {
 
         const createTransactio = z.object( {
@@ -205,7 +267,13 @@ export async function Transactions( fastify: FastifyInstance )
         }
         return res.status( 201 ).send( { message: "created" } );
     } );
-    fastify.put( "/:id", async ( req, res ) =>
+    fastify.put( "/:id", {
+
+        schema: {
+            tags: ["transactions"],
+        }
+
+    }, async ( req, res ) =>
     {
         const updateTransaction = z.object( {
             description: z.string(),

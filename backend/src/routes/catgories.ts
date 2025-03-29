@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { FastifyTypedInstance } from "../fastify-config-instance";
 
 type ResponseCategoriesType = [{
     id: number;
@@ -36,50 +37,63 @@ function convertCategories( data: any[] ): ResponseCategoriesType
 }
 
 
-export async function Categories( fastify: FastifyInstance )
+export async function Categories( fastify: FastifyTypedInstance )
 {
-    fastify.get( "/", async ( req, res ) =>
-    {
-        const { userId } = req.query as { userId: string }
-        const cluseCategoryByUser = [
-            {
-                userId: parseInt( userId )
-            },
-            {
-                userId: null
-            }
-        ]
-        const categories = await prisma.categories.findMany( {
-            where: {
-                OR: cluseCategoryByUser,
-                AND: {
-                    parentId: null
-                }
-            },
-            select: {
-                id: true,
-                category: true,
-                categoryTypeId: true,
-                subCategories: {
-                    where: {
-                        OR: cluseCategoryByUser
-                    },
-                    select: {
+    fastify.get( "/", {
 
-                        id: true,
-                        category: true,
-                        categoryTypeId: true
+        schema: {
+            tags: ["categories"],
+        }
+
+    }
+        , async ( req, res ) =>
+        {
+            const { userId } = req.query as { userId: string }
+            const cluseCategoryByUser = [
+                {
+                    userId: parseInt( userId )
+                },
+                {
+                    userId: null
+                }
+            ]
+            const categories = await prisma.categories.findMany( {
+                where: {
+                    OR: cluseCategoryByUser,
+                    AND: {
+                        parentId: null
+                    }
+                },
+                select: {
+                    id: true,
+                    category: true,
+                    categoryTypeId: true,
+                    subCategories: {
+                        where: {
+                            OR: cluseCategoryByUser
+                        },
+                        select: {
+
+                            id: true,
+                            category: true,
+                            categoryTypeId: true
+                        }
                     }
                 }
-            }
+            } );
+
+            const categoriesRes: ResponseCategoriesType = convertCategories( categories )
+
+            return res.status( 200 ).send( { categories: categoriesRes } );
         } );
 
-        const categoriesRes: ResponseCategoriesType = convertCategories( categories )
+    fastify.post( "/", {
 
-        return res.status( 200 ).send( { categories: categoriesRes } );
-    } );
+        schema: {
+            tags: ["categories"],
+        }
 
-    fastify.post( "/", async ( req, res ) =>
+    }, async ( req, res ) =>
     {
         const createCategory = z.object( {
             category: z.string(),
@@ -99,7 +113,13 @@ export async function Categories( fastify: FastifyInstance )
         } )
         return res.status( 201 ).send( { message: "Categoria criada com sucesso!" } );
     } );
-    fastify.put( "/:id", async ( req, res ) =>
+    fastify.put( "/:id", {
+
+        schema: {
+            tags: ["categories"],
+        }
+
+    }, async ( req, res ) =>
     {
         const updateCategory = z.object( {
             category: z.string(),
@@ -137,7 +157,13 @@ export async function Categories( fastify: FastifyInstance )
 
         return res.status( 202 ).send( { categoryUpdated } );
     } );
-    fastify.delete( "/:id", async ( req, res ) =>
+    fastify.delete( "/:id", {
+
+        schema: {
+            tags: ["categories"],
+        }
+
+    }, async ( req, res ) =>
     {
         const updateCategory = z.object( {
             userId: z.number()
