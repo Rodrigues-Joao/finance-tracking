@@ -1,13 +1,12 @@
 services:
   db:
-    image: postgres
+    image: postgres:14.3
     restart: always
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_PASSWORD: 'example'
-      POSTGRES_USER: 'example'
-      POSTGRES_DB: 'example'
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: app
     volumes:
       - pgdata:/var/lib/postgresql/data
 
